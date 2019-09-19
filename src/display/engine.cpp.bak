@@ -1,0 +1,99 @@
+#include <SDL2/SDL.h>
+#include "engine.h"
+#include "vector.h"
+
+const static int map[10][10] = {
+	{1, 8, 1, 8, 8, 8, 1, 8, 1, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 1, 0, 0, 0, 0, 4},
+	{4, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 4},
+	{3, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 4},
+	{6, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+	{1, 1, 4, 4, 1, 4, 1, 4, 1, 1}
+};
+
+Engine::Engine()
+{
+}
+
+void Engine::Render(SDL_Renderer *r)
+{
+	SDL_SetRenderDrawColor(r, 0, 0, 0, SDL_ALPHA_OPAQUE);
+	SDL_RenderClear(r);
+
+	int z;
+	Vector player(5, 5);
+	Vector dir(-1, 0);
+	Vector plane(0, 0.66);
+	Vector rayDir(0, 0);
+
+	for (int x = 0; x < 640; x++) {
+		double cameraX = 2 * x / 640.0 - 1;
+		rayDir.set_x(dir.get_x() + plane.get_x() * cameraX);
+		rayDir.set_y(dir.get_y() + plane.get_y() * cameraX);
+
+		int mapx = int(player.get_x());
+		int mapy = int(player.get_y());
+
+		double sideDistX;
+		double sideDistY;
+		
+		double deltaDistX = std::abs(1 / rayDir.get_x());
+		double deltaDistY = std::abs(1 / rayDir.get_y());
+		double perpWallDist;
+
+		int stepX, stepY;
+
+		int hit = 0;
+		int side;
+
+		if (rayDir.get_x() < 0) {
+			stepX = -1;
+			sideDistX = (player.get_x() - mapx) * deltaDistX;
+		} else {
+			stepX = 1;
+			sideDistX = (mapx + 1.0 - player.get_x()) * deltaDistX;
+		}
+		
+		if (rayDir.get_y() < 0) {
+			stepY = -1;
+			sideDistY = (player.get_y() - mapy) * deltaDistY;
+		} else {
+			stepY = 1;
+			sideDistY = (mapy + 1.0 - player.get_y()) * deltaDistY;
+		}
+
+		while (!hit) {
+			if (sideDistX < sideDistY) {
+				sideDistX += deltaDistX;
+				mapx += stepX;
+				side = 0;
+			} else {
+				sideDistY += deltaDistY;
+				mapy += stepY;
+				side = 1;
+			}
+			if ((z = map[mapx][mapy]) > 0) hit = 1;
+		}
+		if (!side) {
+			perpWallDist = (mapx - player.get_x() + (1 - stepX) / 2) / rayDir.get_x();
+		} else {
+			perpWallDist = (mapy - player.get_y() + (1 - stepY) / 2) / rayDir.get_y();
+		}
+
+		int lineHeight = (int)(480 / perpWallDist);
+		int drawStart = -lineHeight / 2 + 480 / 2;
+		int drawEnd = lineHeight / 2 + 480 / 2;
+		if (drawStart < 0) drawStart = 0;
+		if (drawEnd >= 480) drawEnd = 480 - 1;
+
+		SDL_SetRenderDrawColor(r, 255 - z*5, 255 - z *5, 255, SDL_ALPHA_OPAQUE);
+		SDL_RenderDrawLine(r, x, drawStart, x, drawEnd);
+	}
+
+
+	SDL_RenderPresent(r);
+}
