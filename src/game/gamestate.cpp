@@ -2,7 +2,7 @@
 #include <cmath>
 #include "gamestate.h"
 
-#define PI (3.141592653)
+static const double PI = 4.0 * atan(1.0);
 
 GameState::GameState()
 {
@@ -13,11 +13,11 @@ GameState::GameState()
 	 * FOV is derived from a ratio between the 
 	 * direction and camera vectors 
 	\*/
-	direction.SetX(-1);
+	direction.SetX(1);
 	direction.SetY(0);
 
 	camera.SetX(0);
-	camera.SetY(.66);
+	camera.SetY(-.66);
 }
 
 int GameState::Running()

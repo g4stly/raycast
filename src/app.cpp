@@ -15,8 +15,8 @@ App::~App()
 
 int App::Execute()
 {
-	int error;
-	if (error = Init()) return error;
+	int error = Init();
+	if (error) return error;
 
 	double dt;
 	SDL_Event ev;
