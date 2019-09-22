@@ -99,10 +99,10 @@ int Display::KeyDown(SDL_Keycode key, GameState *g, double dt)
 	case SDLK_d:
 		g->Strafe(false, dt);
 		break;
-	case SDLK_j:
+	case SDLK_k:
 		g->Rotate(true, dt);
 		break;
-	case SDLK_k:
+	case SDLK_l:
 		g->Rotate(false, dt);
 		break;
 	}
@@ -125,11 +125,12 @@ int Display::Event(SDL_Event *ev)
 
 int Display::Update(GameState *g, double dt)
 {
+	int rv = 1;
 	for (auto key : keypress_map) {
-		KeyDown(key.first, g, dt);
+		rv = rv && KeyDown(key.first, g, dt);
 	}
 
-	return 1;
+	return rv;
 }
 
 void Display::Render(GameState *g)

@@ -31,7 +31,6 @@ int App::Execute()
 		while (SDL_PollEvent(&ev) && (prev = Event(&ev)));
 		if (prev && Update(dt)) Render();
 	}
-
 	return Free();
 }
 
