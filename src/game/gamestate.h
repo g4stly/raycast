@@ -1,6 +1,7 @@
 #ifndef gamestate_h_
 #define gamestate_h_
 
+#include "map.h"
 #include "util/vector.h"
 
 #define MAP_WIDTH (10)
@@ -20,6 +21,9 @@ class GameState {
 	Vector camera;
 	double rot_speed = 3.0;
 	double move_speed = 5.0;
+
+	// map
+	Map map;
 public:
 	GameState();
 
@@ -31,6 +35,7 @@ public:
 private:
 	void Move(Vector *v, bool forward, double dt);
 public:
+	// player methods
 	double GetPosX();
 	double GetPosY();
 	double GetDirX();
@@ -40,6 +45,12 @@ public:
 	void Move(bool forward, double dt);
 	void Strafe(bool left, double dt);
 	void Rotate(bool left, double dt);
+	
+	// map methods
+	int GetMapWidth();
+	int GetMapHeight();
+	const int *GetMap();
+	const uint32_t *GetTextures();
 };
 
 

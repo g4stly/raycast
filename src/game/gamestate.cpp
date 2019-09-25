@@ -91,3 +91,19 @@ void GameState::Rotate(bool left, double dt)
 	direction.Rotate(theta);
 	camera.Rotate(theta);
 }
+
+int GameState::GetMapWidth() {
+	return map.width;
+}
+
+int GameState::GetMapHeight() {
+	return map.height;
+}
+
+const int *GameState::GetMap() {
+	return map.map;
+}
+
+const uint32_t *GameState::GetTextures() {
+	return map.textures;
+}

@@ -4,7 +4,7 @@ LIBS 	= -lSDL2
 TARGET 	= build/raycast
 SOURCES = src/app.cpp
 SOURCES += src/display/display.cpp src/display/engine.cpp
-SOURCES += src/game/gamestate.cpp 
+SOURCES += src/game/gamestate.cpp src/game/map.cpp
 SOURCES += src/util/vector.cpp
 OBJECTS	= $(SOURCES:.cpp=.o)
 
