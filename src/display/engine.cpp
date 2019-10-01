@@ -6,118 +6,116 @@
 
 #include "engine.h"
 
-struct RayCastArgs {
-	// arguments 
-	const int *map;
-	int mapw, maph;
-	int screenw, screenh;
-	double posX, posY;
-	double dirX, dirY;
-	double planeX, planeY;
-	uint32_t *pixels;
-
-	// ray direction + grid position vectors
-	double cameraX, ray_dirX, ray_dirY;
-	int mapX, mapY, stepX, stepY;
-	// DDA variables
-	double sideX, sideY, deltaX, deltaY, distance;
-	// drawing variables
-	int hit, color, line_height, line_start;
-};
-
 Engine::Engine()
 {
-}
-
-static void rayCaster(RayCastArgs *args)
-{
-	RayCastArgs a = *args;	// use reference?
-	for (int x = 0; x < a.screenw; x++) {
-		a.cameraX = ((2 * x) / double(a.screenw)) - 1;
-		a.ray_dirX = a.dirX + (a.planeX * a.cameraX);
-		a.ray_dirY = a.dirY + (a.planeY * a.cameraX);
-
-		a.mapX = int(a.posX);
-		a.mapY = int(a.posY);
-
-		a.deltaX = std::abs((double)1 / a.ray_dirX);
-		a.deltaY = std::abs((double)1 / a.ray_dirY);
-
-		if (a.ray_dirX < 0) {
-			a.stepX = -1;
-			a.sideX = (a.posX - a.mapX) * a.deltaX;
-		} else {
-			a.stepX = 1;
-			a.sideX = (a.mapX + 1.0 - a.posX) * a.deltaX;
-		}
-		
-		if (a.ray_dirY < 0) {
-			a.stepY = -1;
-			a.sideY = (a.posY - a.mapY) * a.deltaY;
-		} else {
-			a.stepY = 1;
-			a.sideY = (a.mapY + 1.0 - a.posY) * a.deltaY;
-		}
-
-		// -1 is y 1 is x
-		a.hit = 0;
-		while (!a.hit) {
-			if (a.sideX < a.sideY) {
-				a.sideX += a.deltaX;
-				a.mapX += a.stepX;
-				a.hit = 1;
-			} else {
-				a.sideY += a.deltaY;
-				a.mapY += a.stepY;
-				a.hit = -1;
-			}
-			if (a.map[(a.mapY*a.mapw) + a.mapX] == 0) a.hit = 0;
-		}
-
-		if (a.hit > 0) {
-			a.distance = (a.mapX - a.posX + (1 - a.stepX) / 2)
-				/ a.ray_dirX;
-		} else {
-			a.distance = (a.mapY - a.posY + (1 - a.stepY) / 2)
-				/ a.ray_dirY;
-		}
-
-		a.line_height = (int)(a.screenh / a.distance);
-		a.line_start = (a.screenh / 2) + (a.line_height / 2);
-		// a.line_height = a.line_height * .4;
-
-		if (a.line_start >= a.screenh) {
-			a.line_height = a.line_height - (a.line_start - a.screenh - 1);
-			a.line_start = a.screenh - 1;
-		}
-		if (a.line_start - a.line_height < 0) {
-			a.line_height = a.line_start;
-		}
-
-		for (int y = a.line_height; y >= 0; y--) {
-			a.color = 0xFF0000;
-			if (a.hit < 0) {
-				a.color = (a.color << 1) & 0x7F7F7F;
-			}
-			a.pixels[x + (a.screenw * (a.line_start - y))] = a.color;
-		}
-	}
 }
 
 void Engine::Render(GameState *g, int w, int h, uint32_t *pixels, int pitch)
 {
 	memset(pixels, 0x00, h * pitch);
 
-	// real position, direction, and camera plane vectors
-	RayCastArgs args = {
-		g->GetMap(),
-		g->GetMapWidth() - 1,
-		g->GetMapHeight() - 1, w, h,
-		g->GetPosX(), g->GetPosY(),
-		g->GetDirX(), g->GetDirY(),
-		g->GetPlaneX(), g->GetPlaneY(),
-		pixels
-	};
+	const int *map = g->GetMap();
+	const uint32_t *texture = g->GetTextures();
+	int mapw = g->GetMapWidth() - 1;
 
-	rayCaster(&args);
+	// real position, direction, and camera plane vectors
+	double posX = g->GetPosX();
+	double posY = g->GetPosY();
+	double dirX = g->GetDirX();
+	double dirY = g->GetDirY();
+	double planeX = g->GetPlaneX();
+	double planeY = g->GetPlaneY();
+
+	// ray direction + grid position vectors
+	double cameraX, ray_dirX, ray_dirY;
+	int mapX, mapY, stepX, stepY;
+
+	// DDA variables
+	double sideX, sideY, deltaX, deltaY, distance;
+
+	// drawing variables
+	int hit, color, line_height, line_start;
+	double wallX;
+	
+	// for each x of the screen, cast ray
+	for (int x = 0; x < w; x++) {
+
+		// our current position on the grid
+		mapX = int(posX);
+		mapY = int(posY);
+
+		// find direction of this ray
+		cameraX = ((2 * x) / double(w)) - 1;
+		ray_dirX = dirX + (planeX * cameraX);
+		ray_dirY = dirY + (planeY * cameraX);
+
+		deltaX = std::abs((double)1 / ray_dirX);
+		if (ray_dirX < 0) {
+			stepX = -1;
+			sideX = (posX - mapX) * deltaX;
+		} else {
+			stepX = 1;
+			sideX = (mapX + 1.0 - posX) * deltaX;
+		}
+		
+		deltaY = std::abs((double)1 / ray_dirY);
+		if (ray_dirY < 0) {
+			stepY = -1;
+			sideY = (posY - mapY) * deltaY;
+		} else {
+			stepY = 1;
+			sideY = (mapY + 1.0 - posY) * deltaY;
+		}
+
+		// actually cast the ray, fast as possible!
+		// -1 is y 1 is x
+		hit = 0;
+		while (!hit) {
+			if (sideX < sideY) {
+				sideX += deltaX;
+				mapX += stepX;
+				hit = 1;
+			} else {
+				sideY += deltaY;
+				mapY += stepY;
+				hit = -1;
+			}
+			if (map[(mapY*mapw) + mapX] == 0) hit = 0;
+		}
+
+		int texX;
+		if (hit > 0) {
+			distance = (mapX - posX + (1 - stepX) / 2) / ray_dirX;
+			wallX = posY + distance * ray_dirY;
+			wallX -= floor(wallX);
+			texX = int(wallX * 64.0);
+			if (ray_dirX > 0) texX = 64 - texX - 1;
+		} else {
+			distance = (mapY - posY + (1 - stepY) / 2) / ray_dirY;
+			wallX = posX + distance * ray_dirX;
+			wallX -= floor(wallX);
+			texX = int(wallX * 64.0);
+			if (ray_dirY < 0) texX = 64 - texX - 1;
+		}
+
+		line_height = (int)(h / distance);
+		line_start = (h / 2) + (line_height / 2);
+
+		// don't draw outside the screen!
+		if (line_start >= h) {
+			line_height = line_height - (line_start - h - 1);
+			line_start = h - 1;
+		}
+		if (line_start - line_height < 0) {
+			line_height = line_start;
+		}
+
+		// draw a vertical strip of the screen
+		for (int y = 0; y < line_height; y++) {
+			int z = (line_start - (y+1)) * 256 - h * 128 + line_height * 128;
+			int texY = ((z * 64) / line_height) / 256;
+			color = texture[texX * 64 + texY];
+			pixels[x + (w * (line_start - y))] = color;
+		}
+	}
 }

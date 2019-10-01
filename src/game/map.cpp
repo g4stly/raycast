@@ -1,3 +1,5 @@
+#include <SDL2/SDL.h>
+#include <cstdio>
 #include "map.h"
 
 #define MAP_WIDTH (20)
@@ -29,4 +31,10 @@ Map::Map() {
 	width = MAP_WIDTH;
 	height = MAP_HEIGHT;
 	map = mock_map;
+
+	for (int y = 0; y < 64; y++)
+	for (int x = 0; x < 64; x++) {
+		uint8_t z = y ^ x;
+		textures[y + x * 64] = (z << 16) | (z << 8) | z;
+	}
 }
