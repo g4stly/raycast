@@ -2,8 +2,8 @@
 #include <SDL2/SDL.h>
 #include "display.h"
 
-#define WINDOW_WIDTH (640)
-#define WINDOW_HEIGHT (480)
+#define WINDOW_WIDTH (860)
+#define WINDOW_HEIGHT (640)
 
 int Display::Init()
 {

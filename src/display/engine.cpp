@@ -6,6 +6,10 @@
 
 #include "engine.h"
 
+#define VERTICAL (-1)
+#define HORIZONTAL (1)
+#define TEX_SZ (64)
+
 Engine::Engine()
 {
 }
@@ -33,9 +37,14 @@ void Engine::Render(GameState *g, int w, int h, uint32_t *pixels, int pitch)
 	// DDA variables
 	double sideX, sideY, deltaX, deltaY, distance;
 
-	// drawing variables
-	int hit, color, line_height, line_start;
+	// wall drawing variables
+	int hit, color, line_height, line_start, shrink;
+	int draw_height, draw_start, texX, texY, z;
 	double wallX;
+
+	// floor drawing variables
+	double floorX, floorY, cur_floorX, cur_floorY;
+	double weight, currentDist;
 	
 	// for each x of the screen, cast ray
 	for (int x = 0; x < w; x++) {
@@ -74,48 +83,82 @@ void Engine::Render(GameState *g, int w, int h, uint32_t *pixels, int pitch)
 			if (sideX < sideY) {
 				sideX += deltaX;
 				mapX += stepX;
-				hit = 1;
+				hit = HORIZONTAL;
 			} else {
 				sideY += deltaY;
 				mapY += stepY;
-				hit = -1;
+				hit = VERTICAL;
 			}
 			if (map[(mapY*mapw) + mapX] == 0) hit = 0;
 		}
 
-		int texX;
-		if (hit > 0) {
+		if (hit == HORIZONTAL) {
 			distance = (mapX - posX + (1 - stepX) / 2) / ray_dirX;
 			wallX = posY + distance * ray_dirY;
 			wallX -= floor(wallX);
-			texX = int(wallX * 64.0);
-			if (ray_dirX > 0) texX = 64 - texX - 1;
+			texX = int(wallX * TEX_SZ);
+			if (ray_dirX > 0) texX = TEX_SZ - texX - 1;
 		} else {
 			distance = (mapY - posY + (1 - stepY) / 2) / ray_dirY;
 			wallX = posX + distance * ray_dirX;
 			wallX -= floor(wallX);
-			texX = int(wallX * 64.0);
-			if (ray_dirY < 0) texX = 64 - texX - 1;
+			texX = int(wallX * TEX_SZ);
+			if (ray_dirY < 0) texX = TEX_SZ - texX - 1;
 		}
 
 		line_height = (int)(h / distance);
 		line_start = (h / 2) + (line_height / 2);
+		draw_height = line_height;
+		draw_start = line_start;
 
 		// don't draw outside the screen!
-		if (line_start >= h) {
-			line_height = line_height - (line_start - h - 1);
-			line_start = h - 1;
+		// the draw_ variables enable us to skip
+		// iterating over off-screen pixels but still
+		// draw the true texture color as if the line were 
+		// being drawn off screen
+		if (draw_start >= h) {
+			draw_height = draw_height - (draw_start - h - 1);
+			draw_start = h - 1;
 		}
-		if (line_start - line_height < 0) {
-			line_height = line_start;
+		if (draw_start - draw_height < 0) {
+			draw_height = draw_start;
 		}
 
-		// draw a vertical strip of the screen
-		for (int y = 0; y < line_height; y++) {
-			int z = (line_start - (y+1)) * 256 - h * 128 + line_height * 128;
-			int texY = ((z * 64) / line_height) / 256;
-			color = texture[texX * 64 + texY];
-			pixels[x + (w * (line_start - y))] = color;
+		// hacky bullshit sorry!
+		// draw a vertical strip of the screen from bottom up
+		for (int y = 0; y < draw_height; y++) {
+			shrink = line_start - draw_start;
+			z = (line_start - (y+1)) * 256 - h * 128 + (line_height - shrink) * 128;
+			texY = ((z * TEX_SZ) / (line_height + shrink)) / 256;
+			color = texture[texX * TEX_SZ + texY];
+			pixels[x + (w * (draw_start - y))] = color;
 		}
+
+
+
+		// position of texel at bottom of wall
+		if (hit == HORIZONTAL) {
+			floorX = ray_dirX > 0 ? mapX : mapX + 1.0;
+			floorY = mapY + wallX;
+		} else {
+			floorX = mapX + wallX;
+			floorY = ray_dirY > 0 ? mapY : mapY + 1.0;
+		}
+
+		// from bottom of wall line to bottom of screen
+		for (int y = draw_start; y < h; y++) {
+			currentDist = h / ((2.0 * y) - h);
+			weight = (currentDist - 0.0) / (distance - 0.0);
+			cur_floorX = weight * floorX + (1.0 - weight) * posX;
+			cur_floorY = weight * floorY + (1.0 - weight) * posY;
+			texX = int(cur_floorX * TEX_SZ) % TEX_SZ;
+			texY = int(cur_floorY * TEX_SZ) % TEX_SZ;
+
+			color = texture[texX * TEX_SZ + texY];
+			pixels[x + (w *  y)] = color;
+			// symmetric point for ceiling
+			pixels[x + (w * (h - y))] = 0xFF0000;
+		}
+
 	}
 }

@@ -105,5 +105,5 @@ const int *GameState::GetMap() {
 }
 
 const uint32_t *GameState::GetTextures() {
-	return map.textures;
+	return (const uint32_t *)map.texture->pixels;
 }
